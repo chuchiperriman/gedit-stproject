@@ -1,0 +1,9 @@
+[Plugin]
+Loader=python
+Module=stproject
+IAge=3
+Name=Project Manager
+Description=Simple project manager for gedit
+Authors=Jesús Barbero Rodríguez <chuchiperriman@gmail.com>
+Copyright=Copyright © 2013 Jesús Barbero Rodríguez
+Version=3.0.0
