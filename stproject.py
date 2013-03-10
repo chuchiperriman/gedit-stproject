@@ -1,5 +1,16 @@
-import json, os
+import json
+import os
 from gi.repository import GObject, Gtk, Gedit, Gio
+
+UI_XML = """<ui>
+<menubar name="MenuBar">
+    <menu name="ProjectMenu" action="ProjectMenu">
+      <placeholder name="ProjectsOps_1">
+        <menuitem action="AddFolderAction"/>
+      </placeholder>
+    </menu>
+</menubar>
+</ui>"""
 
 class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
     __gtype_name__ = "StProjectPlugin"
@@ -17,7 +28,7 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
                                           gfile,
                                           info.get_file_type()])
         
-    def append_dir(self, piter, pfolder, folder):
+    def _append_dir(self, piter, pfolder, folder):
         ppath = os.path.join(pfolder,folder)
         piter = self._append_store(Gio.File.new_for_path(ppath), piter)
         
@@ -27,49 +38,27 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
         for sub in flist:
             path = os.path.join(ppath,sub)
             if os.path.isdir(path):
-                self.append_dir(piter, ppath, sub)
+                self._append_dir(piter, ppath, sub)
 
         for sub in flist:
             path = os.path.join(ppath,sub)
             if os.path.isfile(path):
                 self._append_store(Gio.File.new_for_path(path), piter)
-            
+    
+    def load_project(self, path):
+        json_data=open(path)
+        data = json.load(json_data)
+        json_data.close()
+        
+        for f in data['folders']:
+            self._append_dir(None, '', f['path'])
+    
     def do_activate(self):
-        icon = Gtk.Image.new_from_stock(Gtk.STOCK_FILE, Gtk.IconSize.MENU)
         self._store = Gtk.TreeStore(Gio.Icon, str, GObject.Object, Gio.FileType)
         
-        data = self.load_data()
-        for f in data['folders']:
-            self.append_dir(None, '', f['path'])
-        
-        tree = Gtk.TreeView(self._store)
-        tree.set_headers_visible(False)
-        
-        column = Gtk.TreeViewColumn(None)
-        
-        renderer = Gtk.CellRendererPixbuf()
-        column.pack_start(renderer, False)
-        column.add_attribute(renderer, "gicon", 0)
-
-        renderer = Gtk.CellRendererText()
-        column.pack_start(renderer, True)
-        column.add_attribute(renderer, "markup", 1)
-        
-        tree.append_column(column)
-        
-        tree.connect('row-activated', self.on_row_activated)
-        
-        scroll = Gtk.ScrolledWindow()
-        scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        scroll.add_with_viewport(tree)
-        
-        self._side_widget = scroll
-        panel = self.window.get_side_panel()
-        panel.add_item(self._side_widget,
-                       "ExampleSidePanel", "Project", icon)
-        self._side_widget.show()
-        tree.show()
-        panel.activate_item(self._side_widget)
+        self.load_project('/home/chuchiperriman/tmp/proyecto.json')
+        self._build_panel()
+        self._build_menu()
 
     def on_row_activated(self, tree, path, column):
         model = tree.get_model()
@@ -92,8 +81,70 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
     def do_update_state(self):
         pass
         
-    def load_data(self):
-        json_data=open('/home/chuchiperriman/tmp/proyecto.json')
-        data = json.load(json_data)
-        json_data.close()
-        return data
+    def _build_panel(self):
+        icon = Gtk.Image.new_from_stock(Gtk.STOCK_FILE, Gtk.IconSize.MENU)
+        tree = Gtk.TreeView(self._store)
+        tree.set_headers_visible(False)
+        
+        column = Gtk.TreeViewColumn(None)
+        
+        renderer = Gtk.CellRendererPixbuf()
+        column.pack_start(renderer, False)
+        column.add_attribute(renderer, "gicon", 0)
+
+        renderer = Gtk.CellRendererText()
+        column.pack_start(renderer, True)
+        column.add_attribute(renderer, "markup", 1)
+        
+        tree.append_column(column)
+        
+        tree.connect('row-activated', self.on_row_activated)
+        
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        scroll.add_with_viewport(tree)
+        
+        self._side_widget = scroll
+        self._panel = self.window.get_side_panel()
+        self._panel.add_item(self._side_widget,
+                       "ExampleSidePanel", "Project", icon)
+        self._side_widget.show()
+        tree.show()
+        self._panel.activate_item(self._side_widget)
+    
+    def _build_menu(self):
+        manager = self.window.get_ui_manager()
+        self._actions = Gtk.ActionGroup("StprojectActions")
+        self._actions.add_actions([
+            ('ProjectMenu', None, _('_Project'), None, None, None),
+            ('AddFolderAction', Gtk.STOCK_INFO, "Add folder", 
+                None, "Open a project file", 
+                self.on_addfolder_action_activate),
+        ])
+        manager.insert_action_group(self._actions)
+        self._ui_merge_id = manager.add_ui_from_string(UI_XML)
+        
+        # Moved the menu to a less surprising position.
+        manager = self.window.get_ui_manager()
+        menubar = manager.get_widget('/MenuBar')
+        project_menu = manager.get_widget('/MenuBar/ProjectMenu')
+        menubar.remove(project_menu)
+        menubar.insert(project_menu, 5)
+        self.do_update_state()
+        manager.ensure_update()
+        
+    def on_addfolder_action_activate(self, action, data=None):
+        dialog = Gtk.FileChooserDialog("Please choose a folder to add", self.window,
+            Gtk.FileChooserAction.SELECT_FOLDER,
+            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+             "Select", Gtk.ResponseType.OK))
+
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            self._append_dir(None, '', dialog.get_filename())
+            self._panel.activate_item(self._side_widget)
+        elif response == Gtk.ResponseType.CANCEL:
+            pass
+
+        dialog.destroy()
+        
