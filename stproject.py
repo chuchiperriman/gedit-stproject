@@ -6,6 +6,8 @@ UI_XML = """<ui>
 <menubar name="MenuBar">
     <menu name="ProjectMenu" action="ProjectMenu">
       <placeholder name="ProjectsOps_1">
+        <menuitem action="OpenAction"/>
+        <separator/>
         <menuitem action="AddFolderAction"/>
       </placeholder>
     </menu>
@@ -46,12 +48,20 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
                 self._append_store(Gio.File.new_for_path(path), piter)
     
     def load_project(self, path):
-        json_data=open(path)
-        data = json.load(json_data)
-        json_data.close()
+        try:
+            json_data=open(path)
+            data = json.load(json_data)
+            json_data.close()
+        except:
+            return False
+        
+        #TODO Close current project
+        self._store.clear()
         
         for f in data['folders']:
             self._append_dir(None, '', f['path'])
+            
+        return True
     
     def do_activate(self):
         self._store = Gtk.TreeStore(Gio.Icon, str, GObject.Object, Gio.FileType)
@@ -117,8 +127,11 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
         self._actions = Gtk.ActionGroup("StprojectActions")
         self._actions.add_actions([
             ('ProjectMenu', None, _('_Project'), None, None, None),
-            ('AddFolderAction', Gtk.STOCK_INFO, "Add folder", 
+            ('OpenAction', Gtk.STOCK_OPEN, "Open project", 
                 None, "Open a project file", 
+                self.on_open_action_activate),
+            ('AddFolderAction', Gtk.STOCK_OPEN, "Add folder", 
+                None, "Add forlder to the current project", 
                 self.on_addfolder_action_activate),
         ])
         manager.insert_action_group(self._actions)
@@ -132,6 +145,23 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
         menubar.insert(project_menu, 5)
         self.do_update_state()
         manager.ensure_update()
+        
+    def on_open_action_activate(self, action, data=None):
+        dialog = Gtk.FileChooserDialog("Please choose a project file", self.window,
+            Gtk.FileChooserAction.OPEN,
+            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+             Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
+
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            res = self.load_project(dialog.get_filename())
+            #TODO If False, the project file is not valid
+            self._panel.activate_item(self._side_widget)
+        elif response == Gtk.ResponseType.CANCEL:
+            pass
+
+        dialog.destroy()
+        
         
     def on_addfolder_action_activate(self, action, data=None):
         dialog = Gtk.FileChooserDialog("Please choose a folder to add", self.window,
