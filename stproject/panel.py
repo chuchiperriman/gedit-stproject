@@ -1,5 +1,6 @@
 import os
 from gi.repository import GObject, Gtk, Gedit, Gio, Gdk
+from project import ProjectJsonFile
 
 
 POPUP_UI = """
@@ -7,6 +8,9 @@ POPUP_UI = """
     <menuitem name='AddFolderAction' action='AddFolderAction' />
     <separator />
     <menuitem name='RemoveFolder' action='RemoveFolder' />
+  </popup>
+  <popup name='NoProjectPopupMenu'>
+    <menuitem name='CreateAction' action='CreateAction' />
   </popup>
 """
 
@@ -19,6 +23,8 @@ class Panel (Gtk.ScrolledWindow):
         Gtk.ScrolledWindow.__init__(self)
         self.window = window
         self.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        
+        self._project = None
         
         self._store = Gtk.TreeStore(Gio.Icon, str, GObject.Object, Gio.FileType)
         
@@ -38,6 +44,19 @@ class Panel (Gtk.ScrolledWindow):
     def add_folder(self, path):
         self._append_dir(None, '', path)
         
+    def create_project_action(self):
+        dialog = Gtk.FileChooserDialog("Please choose a file to add", self.window,
+            Gtk.FileChooserAction.SAVE,
+            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+             "Save", Gtk.ResponseType.OK))
+
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            res = self.load_project(ProjectJsonFile(dialog.get_filename()))
+
+        dialog.destroy()
+        
+        return response
     def add_folder_action(self):
         dialog = Gtk.FileChooserDialog("Please choose a folder to add", self.window,
             Gtk.FileChooserAction.SELECT_FOLDER,
@@ -108,6 +127,9 @@ class Panel (Gtk.ScrolledWindow):
         action_group = Gtk.ActionGroup("StProjectPanelActions")
         
         action_group.add_actions([
+            ('CreateAction', Gtk.STOCK_NEW, "New project", 
+                None, "Create a new project file", 
+                self.on_create_action_activate),
             ("RemoveFolder", Gtk.STOCK_REMOVE, 'Remove folder from project', None, None,
              self.on_removefolder_action_activate),
             ('AddFolderAction', Gtk.STOCK_OPEN, "Add folder to project", 
@@ -125,29 +147,36 @@ class Panel (Gtk.ScrolledWindow):
         self._uimanager.insert_action_group(action_group)
         
         self.popup = self._uimanager.get_widget("/PopupMenu")
+        self.popupnp = self._uimanager.get_widget("/NoProjectPopupMenu")
 
         self._tree.connect("button-press-event", self.on_button_press_event)
         
     def on_button_press_event(self, widget, event):
         # Check if right mouse button was preseed
         if event.type == Gdk.EventType.BUTTON_PRESS and event.button == 3:
-            menu = self._uimanager.get_widget('/PopupMenu/RemoveFolder')
-            selection = self._tree.get_selection()
-            
-            item_spec = self._tree.get_path_at_pos(int(event.x), int(event.y))
-            if item_spec:
-                path, col, rx, ry = item_spec
-                selection.select_path(path)
-            
-            model, treeiter = selection.get_selected()
-            if treeiter != None and self._store.iter_depth(treeiter) == 0:
-                menu.set_sensitive(True)
+            if not self._project:
+                self.popupnp.popup(None, None, None, None, event.button, event.time)
             else:
-                menu.set_sensitive(False)
-                    
-            self.popup.popup(None, None, None, None, event.button, event.time)
+                menu = self._uimanager.get_widget('/PopupMenu/RemoveFolder')
+                selection = self._tree.get_selection()
+                
+                item_spec = self._tree.get_path_at_pos(int(event.x), int(event.y))
+                if item_spec:
+                    path, col, rx, ry = item_spec
+                    selection.select_path(path)
+                
+                model, treeiter = selection.get_selected()
+                if treeiter != None and self._store.iter_depth(treeiter) == 0:
+                    menu.set_sensitive(True)
+                else:
+                    menu.set_sensitive(False)
+                        
+                self.popup.popup(None, None, None, None, event.button, event.time)
             return True # event has been handled
-            
+    
+    def on_create_action_activate(self, action, data=None):
+        self.create_project_action()
+                
     def on_removefolder_action_activate(self, action, data=None):
         selection = self._tree.get_selection()
         model, treeiter = selection.get_selected()

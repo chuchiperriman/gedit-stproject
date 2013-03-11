@@ -1,3 +1,4 @@
+import os
 import json
 
 class Project (object):
@@ -18,12 +19,19 @@ class ProjectJsonFile (Project):
 
     def __init__(self, path):
         
+        if not os.path.exists(path):
+            with open(path, 'wb') as fp:
+                json.dump({}, fp, indent=4)
+                
         self.folders = []
         with open(path, 'rb') as fp:
             self._data = json.load(fp)
         
         self._path = path
         
+        if 'folders' not in self._data:
+            self._data['folders'] = []
+            
         for f in self._data['folders']:
             self.folders.append(f['path'])
 

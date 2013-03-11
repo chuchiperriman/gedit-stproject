@@ -1,11 +1,12 @@
 from gi.repository import GObject, Gtk, Gedit
 from panel import Panel
-from project import Project, ProjectJsonFile
+from project import ProjectJsonFile
 
 UI_XML = """<ui>
 <menubar name="MenuBar">
     <menu name="ProjectMenu" action="ProjectMenu">
       <placeholder name="ProjectsOps_1">
+        <menuitem action='CreateAction' />
         <menuitem action="OpenAction"/>
         <separator/>
         <menuitem action="AddFolderAction"/>
@@ -24,7 +25,6 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
     def do_activate(self):
         self._build_panel()
         self._build_menu()
-        self._side_widget.load_project(Project())
 
     def do_deactivate(self):
         panel = self.window.get_side_panel()
@@ -53,6 +53,9 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
         self._actions = Gtk.ActionGroup("StprojectActions")
         self._actions.add_actions([
             ('ProjectMenu', None, _('_Project'), None, None, None),
+            ('CreateAction', Gtk.STOCK_NEW, "New project", 
+                None, "Create a new project file", 
+                self.on_create_action_activate),
             ('OpenAction', Gtk.STOCK_OPEN, "Open project", 
                 None, "Open a project file", 
                 self.on_open_action_activate),
@@ -71,6 +74,9 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
         menubar.insert(project_menu, 5)
         self.do_update_state()
         manager.ensure_update()
+        
+    def on_create_action_activate(self, action, data=None):
+        self._side_widget.create_project_action()
         
     def on_open_action_activate(self, action, data=None):
         dialog = Gtk.FileChooserDialog("Please choose a project file", self.window,
