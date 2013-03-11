@@ -4,8 +4,9 @@ from gi.repository import GObject, Gtk, Gedit, Gio, Gdk
 
 POPUP_UI = """
   <popup name='PopupMenu'>
-    <menuitem action='AddFolderAction' />
-    <menuitem action='RemoveFolder' />
+    <menuitem name='AddFolderAction' action='AddFolderAction' />
+    <separator />
+    <menuitem name='RemoveFolder' action='RemoveFolder' />
   </popup>
 """
 
@@ -114,22 +115,36 @@ class Panel (Gtk.ScrolledWindow):
                 self.on_addfolder_action_activate),
         ])
     
-        uimanager = Gtk.UIManager()
+        self._uimanager = Gtk.UIManager()
 
         # Throws exception if something went wrong
-        uimanager.add_ui_from_string(POPUP_UI)
+        self._uimanager.add_ui_from_string(POPUP_UI)
         # Add the accelerator group to the toplevel window
-        accelgroup = uimanager.get_accel_group()
+        accelgroup = self._uimanager.get_accel_group()
         self.window.add_accel_group(accelgroup)
-        uimanager.insert_action_group(action_group)
+        self._uimanager.insert_action_group(action_group)
         
-        self.popup = uimanager.get_widget("/PopupMenu")
+        self.popup = self._uimanager.get_widget("/PopupMenu")
 
         self._tree.connect("button-press-event", self.on_button_press_event)
         
     def on_button_press_event(self, widget, event):
         # Check if right mouse button was preseed
         if event.type == Gdk.EventType.BUTTON_PRESS and event.button == 3:
+            menu = self._uimanager.get_widget('/PopupMenu/RemoveFolder')
+            selection = self._tree.get_selection()
+            
+            item_spec = self._tree.get_path_at_pos(int(event.x), int(event.y))
+            if item_spec:
+                path, col, rx, ry = item_spec
+                selection.select_path(path)
+            
+            model, treeiter = selection.get_selected()
+            if treeiter != None and self._store.iter_depth(treeiter) == 0:
+                menu.set_sensitive(True)
+            else:
+                menu.set_sensitive(False)
+                    
             self.popup.popup(None, None, None, None, event.button, event.time)
             return True # event has been handled
             
@@ -137,10 +152,12 @@ class Panel (Gtk.ScrolledWindow):
         selection = self._tree.get_selection()
         model, treeiter = selection.get_selected()
         if treeiter != None:
-            info = model.get(treeiter, 2, 3)
-            print info[0].get_path()
-            self._project.remove_folder(info[0].get_path())
-            model.remove(treeiter)
+            #Only remove root nodes
+            if self._store.iter_depth(treeiter) == 0:
+                info = model.get(treeiter, 2, 3)
+                print info[0].get_path()
+                self._project.remove_folder(info[0].get_path())
+                model.remove(treeiter)
         
     def on_addfolder_action_activate(self, action, data=None):
         self.add_folder_action()
