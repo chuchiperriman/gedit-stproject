@@ -1,6 +1,6 @@
 from gi.repository import GObject, Gtk, Gedit
 from panel import Panel
-from project import ProjectJsonFile
+from project import Project, ProjectJsonFile
 
 UI_XML = """<ui>
 <menubar name="MenuBar">
@@ -24,8 +24,7 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
     def do_activate(self):
         self._build_panel()
         self._build_menu()
-        
-        self.load_project(ProjectJsonFile('/home/chuchiperriman/dev/gedit-stproject/project.json'))
+        self._side_widget.load_project(Project())
 
     def do_deactivate(self):
         panel = self.window.get_side_panel()
@@ -91,18 +90,6 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
         
         
     def on_addfolder_action_activate(self, action, data=None):
-        dialog = Gtk.FileChooserDialog("Please choose a folder to add", self.window,
-            Gtk.FileChooserAction.SELECT_FOLDER,
-            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-             "Select", Gtk.ResponseType.OK))
-
-        response = dialog.run()
-        if response == Gtk.ResponseType.OK:
-            self._project.add_folder(dialog.get_filename())
-            self._side_widget.add_folder(dialog.get_filename())
-            self._panel.activate_item(self._side_widget)
-        elif response == Gtk.ResponseType.CANCEL:
-            pass
-
-        dialog.destroy()
+        self._side_widget.add_folder_action()
+        self._panel.activate_item(self._side_widget)
         

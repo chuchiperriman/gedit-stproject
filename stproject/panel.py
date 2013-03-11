@@ -1,10 +1,19 @@
 import os
-from gi.repository import GObject, Gtk, Gedit, Gio
+from gi.repository import GObject, Gtk, Gedit, Gio, Gdk
+
+
+POPUP_UI = """
+  <popup name='PopupMenu'>
+    <menuitem action='AddFolderAction' />
+    <menuitem action='RemoveFolder' />
+  </popup>
+"""
+
 
 class Panel (Gtk.ScrolledWindow):
 
     __gtype_name__ = 'StProjectPanel'
-    
+
     def __init__(self, window):
         Gtk.ScrolledWindow.__init__(self)
         self.window = window
@@ -18,6 +27,7 @@ class Panel (Gtk.ScrolledWindow):
         
         #TODO Close current project
         self._store.clear()
+        self._project = project
         
         for f in project.get_folders():
             self._append_dir(None, '', f)
@@ -26,6 +36,21 @@ class Panel (Gtk.ScrolledWindow):
         
     def add_folder(self, path):
         self._append_dir(None, '', path)
+        
+    def add_folder_action(self):
+        dialog = Gtk.FileChooserDialog("Please choose a folder to add", self.window,
+            Gtk.FileChooserAction.SELECT_FOLDER,
+            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+             "Select", Gtk.ResponseType.OK))
+
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            self._project.add_folder(dialog.get_filename())
+            self.add_folder(dialog.get_filename())
+
+        dialog.destroy()
+        
+        return response
         
     def _append_store(self, gfile, piter):
         info = gfile.query_info("standard::*",
@@ -54,8 +79,8 @@ class Panel (Gtk.ScrolledWindow):
                 self._append_store(Gio.File.new_for_path(path), piter)
     
     def _build_ui(self):
-        tree = Gtk.TreeView(self._store)
-        tree.set_headers_visible(False)
+        self._tree = Gtk.TreeView(self._store)
+        self._tree.set_headers_visible(False)
         
         column = Gtk.TreeViewColumn(None)
         
@@ -67,13 +92,58 @@ class Panel (Gtk.ScrolledWindow):
         column.pack_start(renderer, True)
         column.add_attribute(renderer, "markup", 1)
         
-        tree.append_column(column)
+        self._tree.append_column(column)
         
-        tree.connect('row-activated', self._on_row_activated)
+        self._tree.connect('row-activated', self._on_row_activated)
         
-        self.add_with_viewport(tree)
+        self.add_with_viewport(self._tree)
         
-        tree.show()
+        self._build_popup()
+        
+        self._tree.show()
+        
+    def _build_popup(self):
+    
+        action_group = Gtk.ActionGroup("StProjectPanelActions")
+        
+        action_group.add_actions([
+            ("RemoveFolder", Gtk.STOCK_REMOVE, 'Remove folder from project', None, None,
+             self.on_removefolder_action_activate),
+            ('AddFolderAction', Gtk.STOCK_OPEN, "Add folder to project", 
+                None, "Add forlder to the current project", 
+                self.on_addfolder_action_activate),
+        ])
+    
+        uimanager = Gtk.UIManager()
+
+        # Throws exception if something went wrong
+        uimanager.add_ui_from_string(POPUP_UI)
+        # Add the accelerator group to the toplevel window
+        accelgroup = uimanager.get_accel_group()
+        self.window.add_accel_group(accelgroup)
+        uimanager.insert_action_group(action_group)
+        
+        self.popup = uimanager.get_widget("/PopupMenu")
+
+        self._tree.connect("button-press-event", self.on_button_press_event)
+        
+    def on_button_press_event(self, widget, event):
+        # Check if right mouse button was preseed
+        if event.type == Gdk.EventType.BUTTON_PRESS and event.button == 3:
+            self.popup.popup(None, None, None, None, event.button, event.time)
+            return True # event has been handled
+            
+    def on_removefolder_action_activate(self, action, data=None):
+        selection = self._tree.get_selection()
+        model, treeiter = selection.get_selected()
+        if treeiter != None:
+            info = model.get(treeiter, 2, 3)
+            print info[0].get_path()
+            self._project.remove_folder(info[0].get_path())
+            model.remove(treeiter)
+        
+    def on_addfolder_action_activate(self, action, data=None):
+        self.add_folder_action()
         
     def _on_row_activated(self, tree, path, column):
         model = tree.get_model()

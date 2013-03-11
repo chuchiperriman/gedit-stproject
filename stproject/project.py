@@ -5,6 +5,12 @@ class Project (object):
     def __init__(self):
         self.folders = []
         
+    def add_folder(self, path):
+        self.folders.append(path)
+        
+    def remove_folder(self, path):
+        self.folders.remove(path)
+        
     def get_folders(self):
         return self.folders
 
@@ -25,6 +31,15 @@ class ProjectJsonFile (Project):
         self._data['folders'].append({
             'path': path
         })
+        self.folders.append(path)
+        self.save()
+    
+    def remove_folder(self, path):
+        for f in self._data['folders']:
+            if f['path'] == path:
+                self._data['folders'].remove(f)
+                break
+        self.folders.remove(path)
         self.save()
         
     def save(self):
