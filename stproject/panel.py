@@ -11,6 +11,7 @@ POPUP_UI = """
   </popup>
   <popup name='NoProjectPopupMenu'>
     <menuitem name='CreateAction' action='CreateAction' />
+    <menuitem name='OpenAction' action="OpenAction"/>
   </popup>
 """
 
@@ -45,7 +46,7 @@ class Panel (Gtk.ScrolledWindow):
         self._append_dir(None, '', path)
         
     def create_project_action(self):
-        dialog = Gtk.FileChooserDialog("Please choose a file to add", self.window,
+        dialog = Gtk.FileChooserDialog("Please choose a file to create", self.window,
             Gtk.FileChooserAction.SAVE,
             (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
              "Save", Gtk.ResponseType.OK))
@@ -55,8 +56,23 @@ class Panel (Gtk.ScrolledWindow):
             res = self.load_project(ProjectJsonFile(dialog.get_filename()))
 
         dialog.destroy()
-        
         return response
+        
+    def open_project_action(self):
+        dialog = Gtk.FileChooserDialog("Please choose a project file", self.window,
+            Gtk.FileChooserAction.OPEN,
+            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+             Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
+
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            res = self.load_project(ProjectJsonFile(dialog.get_filename()))
+        elif response == Gtk.ResponseType.CANCEL:
+            pass
+
+        dialog.destroy()
+        return response
+        
     def add_folder_action(self):
         dialog = Gtk.FileChooserDialog("Please choose a folder to add", self.window,
             Gtk.FileChooserAction.SELECT_FOLDER,
@@ -130,6 +146,9 @@ class Panel (Gtk.ScrolledWindow):
             ('CreateAction', Gtk.STOCK_NEW, "New project", 
                 None, "Create a new project file", 
                 self.on_create_action_activate),
+            ('OpenAction', Gtk.STOCK_OPEN, "Open project", 
+                None, "Open a project file", 
+                self.on_open_action_activate),
             ("RemoveFolder", Gtk.STOCK_REMOVE, 'Remove folder from project', None, None,
              self.on_removefolder_action_activate),
             ('AddFolderAction', Gtk.STOCK_OPEN, "Add folder to project", 
@@ -177,6 +196,9 @@ class Panel (Gtk.ScrolledWindow):
     def on_create_action_activate(self, action, data=None):
         self.create_project_action()
                 
+    def on_open_action_activate(self, action, data=None):
+        self.open_project_action()
+        
     def on_removefolder_action_activate(self, action, data=None):
         selection = self._tree.get_selection()
         model, treeiter = selection.get_selected()

@@ -1,6 +1,5 @@
 from gi.repository import GObject, Gtk, Gedit
 from panel import Panel
-from project import ProjectJsonFile
 
 UI_XML = """<ui>
 <menubar name="MenuBar">
@@ -8,8 +7,6 @@ UI_XML = """<ui>
       <placeholder name="ProjectsOps_1">
         <menuitem action='CreateAction' />
         <menuitem action="OpenAction"/>
-        <separator/>
-        <menuitem action="AddFolderAction"/>
       </placeholder>
     </menu>
 </menubar>
@@ -59,9 +56,6 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
             ('OpenAction', Gtk.STOCK_OPEN, "Open project", 
                 None, "Open a project file", 
                 self.on_open_action_activate),
-            ('AddFolderAction', Gtk.STOCK_OPEN, "Add folder", 
-                None, "Add forlder to the current project", 
-                self.on_addfolder_action_activate),
         ])
         manager.insert_action_group(self._actions)
         self._ui_merge_id = manager.add_ui_from_string(UI_XML)
@@ -77,25 +71,8 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
         
     def on_create_action_activate(self, action, data=None):
         self._side_widget.create_project_action()
-        
-    def on_open_action_activate(self, action, data=None):
-        dialog = Gtk.FileChooserDialog("Please choose a project file", self.window,
-            Gtk.FileChooserAction.OPEN,
-            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-             Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
-
-        response = dialog.run()
-        if response == Gtk.ResponseType.OK:
-            res = self.load_project(ProjectJsonFile(dialog.get_filename()))
-            #TODO If False, the project file is not valid
-            self._panel.activate_item(self._side_widget)
-        elif response == Gtk.ResponseType.CANCEL:
-            pass
-
-        dialog.destroy()
-        
-        
-    def on_addfolder_action_activate(self, action, data=None):
-        self._side_widget.add_folder_action()
         self._panel.activate_item(self._side_widget)
         
+    def on_open_action_activate(self, action, data=None):
+        self._side_widget.open_project_action()
+        self._panel.activate_item(self._side_widget)
