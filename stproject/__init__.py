@@ -1,5 +1,9 @@
+import os
+import xdg
+import json
 from gi.repository import GObject, Gtk, Gedit
 from panel import Panel
+from project import ProjectJsonFile
 
 UI_XML = """<ui>
 <menubar name="MenuBar">
@@ -7,6 +11,7 @@ UI_XML = """<ui>
       <placeholder name="ProjectsOps_1">
         <menuitem action='CreateAction' />
         <menuitem action="OpenAction"/>
+        <menuitem action="LastAction"/>
       </placeholder>
     </menu>
 </menubar>
@@ -56,6 +61,9 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
             ('OpenAction', Gtk.STOCK_OPEN, "Open project", 
                 None, "Open a project file", 
                 self.on_open_action_activate),
+            ('LastAction', Gtk.STOCK_OPEN, "Open last project", 
+                None, "Open the las opened project", 
+                self.on_last_action_activate),
         ])
         manager.insert_action_group(self._actions)
         self._ui_merge_id = manager.add_ui_from_string(UI_XML)
@@ -76,3 +84,22 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
     def on_open_action_activate(self, action, data=None):
         self._side_widget.open_project_action()
         self._panel.activate_item(self._side_widget)
+        
+    def on_last_action_activate(self, action, data=None):
+        cache = xdg.BaseDirectory.xdg_cache_home
+        cache = os.path.join(cache, 'stproject', 'preferences.json')
+        pref = {}
+        try:
+            with open(cache, 'rb') as fp:
+                pref = json.load(fp)
+        except:
+            pass
+            
+        if 'last_open' in pref:
+            self.load_project(ProjectJsonFile(pref['last_open']))
+        else:
+            dialog = Gtk.MessageDialog(self.window, 0, Gtk.MessageType.INFO,
+                Gtk.ButtonsType.OK, "No project to open")
+            dialog.run()
+            dialog.destroy()
+            return

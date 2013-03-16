@@ -5,6 +5,10 @@ class Project (object):
 
     def __init__(self):
         self.folders = []
+        self.name = 'Project'
+    
+    def get_name(self):
+        return self.name
         
     def add_folder(self, path):
         self.folders.append(path)
@@ -29,6 +33,9 @@ class ProjectJsonFile (Project):
         
         self._path = path
         
+        if 'name' in self._data:
+            self.name = self._data['name']
+            
         if 'folders' not in self._data:
             self._data['folders'] = []
             

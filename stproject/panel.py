@@ -1,4 +1,6 @@
 import os
+import xdg
+import json
 from gi.repository import GObject, Gtk, Gedit, Gio, Gdk
 from project import ProjectJsonFile
 
@@ -40,11 +42,30 @@ class Panel (Gtk.ScrolledWindow):
         for f in project.get_folders():
             self._append_dir(None, '', f)
             
+        if isinstance(project, ProjectJsonFile):
+            self.save_last_project(project._path)
         return True
         
     def add_folder(self, path):
         self._append_dir(None, '', path)
         
+    def save_last_project(self, path):
+        cache = xdg.BaseDirectory.xdg_cache_home
+        cache = os.path.join(cache, 'stproject')
+        if not os.path.exists(cache):
+            os.makedirs(cache)
+        cache = os.path.join(cache, 'preferences.json')
+        pref = {}
+        try:
+            with open(cache, 'rb') as fp:
+                pref = json.load(fp)
+        except:
+            pass
+            
+        pref['last_open'] = path
+        with open(cache, 'wb') as fp:
+            json.dump(pref, fp, indent=4)
+            
     def create_project_action(self):
         dialog = Gtk.FileChooserDialog("Please choose a file to create", self.window,
             Gtk.FileChooserAction.SAVE,
