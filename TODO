@@ -1,0 +1,4 @@
+* Create a configuration object (add the last open document)
+* Remove key bindings
+* Add refresh option to the context menu
+* Refresh project when a document is saved

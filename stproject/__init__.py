@@ -1,9 +1,7 @@
-import os
-import xdg
-import json
 from gi.repository import GObject, Gtk, Gedit
 from panel import Panel
 from project import ProjectJsonFile
+import config
 
 UI_XML = """<ui>
 <menubar name="MenuBar">
@@ -86,17 +84,10 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
         self._panel.activate_item(self._side_widget)
         
     def on_last_action_activate(self, action, data=None):
-        cache = xdg.BaseDirectory.xdg_cache_home
-        cache = os.path.join(cache, 'stproject', 'preferences.json')
-        pref = {}
-        try:
-            with open(cache, 'rb') as fp:
-                pref = json.load(fp)
-        except:
-            pass
-            
-        if 'last_open' in pref:
-            self.load_project(ProjectJsonFile(pref['last_open']))
+        path = config.get_last_project()
+        if path:
+            self.load_project(ProjectJsonFile(path))
+            self._panel.activate_item(self._side_widget)
         else:
             dialog = Gtk.MessageDialog(self.window, 0, Gtk.MessageType.INFO,
                 Gtk.ButtonsType.OK, "No project to open")
