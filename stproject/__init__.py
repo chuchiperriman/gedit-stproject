@@ -53,13 +53,13 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
         self._actions = Gtk.ActionGroup("StprojectActions")
         self._actions.add_actions([
             ('ProjectMenu', None, _('_Project'), None, None, None),
-            ('CreateAction', Gtk.STOCK_NEW, "New project", 
+            ('CreateAction', None, "New project", 
                 None, "Create a new project file", 
                 self.on_create_action_activate),
-            ('OpenAction', Gtk.STOCK_OPEN, "Open project", 
+            ('OpenAction', None, "Open project", 
                 None, "Open a project file", 
                 self.on_open_action_activate),
-            ('LastAction', Gtk.STOCK_OPEN, "Open last project", 
+            ('LastAction', None, "Open last project", 
                 None, "Open the las opened project", 
                 self.on_last_action_activate),
         ])

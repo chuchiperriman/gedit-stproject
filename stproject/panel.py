@@ -6,6 +6,7 @@ import config
 
 POPUP_UI = """
   <popup name='PopupMenu'>
+    <menuitem name='RefreshAction' action='RefreshAction' />
     <menuitem name='AddFolderAction' action='AddFolderAction' />
     <separator />
     <menuitem name='RemoveFolder' action='RemoveFolder' />
@@ -149,15 +150,18 @@ class Panel (Gtk.ScrolledWindow):
         action_group = Gtk.ActionGroup("StProjectPanelActions")
         
         action_group.add_actions([
-            ('CreateAction', Gtk.STOCK_NEW, "New project", 
+            ('RefreshAction', None, "Refresh project", 
+                None, "Refresh the project files", 
+                self.on_refresh_action_activate),
+            ('CreateAction', None, "New project", 
                 None, "Create a new project file", 
                 self.on_create_action_activate),
-            ('OpenAction', Gtk.STOCK_OPEN, "Open project", 
+            ('OpenAction', None, "Open project", 
                 None, "Open a project file", 
                 self.on_open_action_activate),
-            ("RemoveFolder", Gtk.STOCK_REMOVE, 'Remove folder from project', None, None,
+            ("RemoveFolder", None, 'Remove folder from project', None, None,
              self.on_removefolder_action_activate),
-            ('AddFolderAction', Gtk.STOCK_OPEN, "Add folder to project", 
+            ('AddFolderAction', None, "Add folder to project", 
                 None, "Add forlder to the current project", 
                 self.on_addfolder_action_activate),
         ])
@@ -218,6 +222,9 @@ class Panel (Gtk.ScrolledWindow):
         
     def on_addfolder_action_activate(self, action, data=None):
         self.add_folder_action()
+        
+    def on_refresh_action_activate(self, action, data=None):
+        self.load_project(self._project)
         
     def _on_row_activated(self, tree, path, column):
         model = tree.get_model()
