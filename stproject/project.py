@@ -1,5 +1,6 @@
 import os
 import json
+from gi.repository import Gio
 
 class Project (object):
 
@@ -18,6 +19,9 @@ class Project (object):
         
     def get_folders(self):
         return self.folders
+    
+    def get_folder_icon(self, folder):
+        return None
 
 class ProjectJsonFile (Project):
 
@@ -56,6 +60,12 @@ class ProjectJsonFile (Project):
                 break
         self.folders.remove(path)
         self.save()
+        
+    def get_folder_icon(self, folder):
+        for f in self._data['folders']:
+            if f['path'] == folder and 'icon' in f:
+                return Gio.FileIcon.new(Gio.File.new_for_path(f['icon']))
+        return None
         
     def save(self):
         with open(self._path, 'wb') as fp:

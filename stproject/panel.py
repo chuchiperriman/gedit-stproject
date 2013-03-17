@@ -99,7 +99,15 @@ class Panel (Gtk.ScrolledWindow):
         info = gfile.query_info("standard::*",
                                 Gio.FileQueryInfoFlags.NONE,
                                 None)
-        return self._store.append(piter, [info.get_icon(), 
+        icon = None
+        if not piter:
+            #Root folder
+            icon = self._project.get_folder_icon(gfile.get_path())
+            
+        if not icon:
+            icon = info.get_icon()
+            
+        return self._store.append(piter, [icon,
                                           info.get_name(),
                                           gfile,
                                           info.get_file_type()])
