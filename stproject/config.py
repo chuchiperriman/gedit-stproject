@@ -1,4 +1,5 @@
 import xdg
+import xdg.BaseDirectory
 import os
 import json
 
@@ -19,7 +20,7 @@ def _load():
             with open(_config_file, 'rb') as fp:
                 _config = json.load(fp)
         except:
-            pass
+            _config = {}
     
 def save_last_project(path):
     global _config, _config_file
