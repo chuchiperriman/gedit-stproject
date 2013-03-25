@@ -35,19 +35,25 @@ class Panel (Gtk.ScrolledWindow):
         
     def load_project(self, project):
         
-        #TODO Close current project
         self._store.clear()
         self._project = project
         
         for f in project.get_folders():
-            self._append_dir(None, '', f)
+            self._append_folder(None, f)
             
         if isinstance(project, ProjectJsonFile):
             self.save_last_project(project._path)
+            
+        model = self._tree.get_model()
+        it = model.get_iter_first()
+        while it:
+            self._tree.expand_row(model.get_path(it), False)
+            it = model.iter_next(it)
+        
         return True
         
-    def add_folder(self, path):
-        self._append_dir(None, '', path)
+    def add_folder(self, folder):
+        self._append_folder(None, '', folder)
         
     def save_last_project(self, path):
         path = config.save_last_project(path)
@@ -112,23 +118,14 @@ class Panel (Gtk.ScrolledWindow):
                                           gfile,
                                           info.get_file_type()])
         
-    def _append_dir(self, piter, pfolder, folder):
-        ppath = os.path.join(pfolder,folder)
-        piter = self._append_store(Gio.File.new_for_path(ppath), piter)
+    def _append_folder(self, piter, folder):
+        piter = self._append_store(Gio.File.new_for_path(folder.get_path()), piter)
         
-        #TODO sort the tree, not two loops here...
-        flist = os.listdir(ppath)
-        flist.sort()
-        for sub in flist:
-            path = os.path.join(ppath,sub)
-            if os.path.isdir(path):
-                self._append_dir(piter, ppath, sub)
+        for sub in folder.get_folders():
+            self._append_folder(piter, sub)
+        for sub in folder.get_files():
+            self._append_store(Gio.File.new_for_path(sub), piter)
 
-        for sub in flist:
-            path = os.path.join(ppath,sub)
-            if os.path.isfile(path):
-                self._append_store(Gio.File.new_for_path(path), piter)
-    
     def _build_ui(self):
         self._tree = Gtk.TreeView(self._store)
         self._tree.set_headers_visible(False)
@@ -224,7 +221,6 @@ class Panel (Gtk.ScrolledWindow):
             #Only remove root nodes
             if self._store.iter_depth(treeiter) == 0:
                 info = model.get(treeiter, 2, 3)
-                print info[0].get_path()
                 self._project.remove_folder(info[0].get_path())
                 model.remove(treeiter)
         
