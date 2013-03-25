@@ -228,6 +228,7 @@ class Panel (Gtk.ScrolledWindow):
         self.add_folder_action()
         
     def on_refresh_action_activate(self, action, data=None):
+        self._project.reload()
         self.load_project(self._project)
         
     def _on_row_activated(self, tree, path, column):
