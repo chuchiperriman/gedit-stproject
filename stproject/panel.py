@@ -10,6 +10,8 @@ POPUP_UI = """
     <menuitem name='AddFolderAction' action='AddFolderAction' />
     <separator />
     <menuitem name='RemoveFolder' action='RemoveFolder' />
+    <separator />
+    <menuitem name='EditProject' action='EditProject' />
   </popup>
   <popup name='NoProjectPopupMenu'>
     <menuitem name='CreateAction' action='CreateAction' />
@@ -169,6 +171,9 @@ class Panel (Gtk.ScrolledWindow):
             ('AddFolderAction', None, "Add folder to project", 
                 None, "Add forlder to the current project", 
                 self.on_addfolder_action_activate),
+            ('EditProject', None, "Edit project file", 
+                None, "Edit current file", 
+                self.on_editproject_action_activate),
         ])
     
         self._uimanager = Gtk.UIManager()
@@ -226,6 +231,10 @@ class Panel (Gtk.ScrolledWindow):
         
     def on_addfolder_action_activate(self, action, data=None):
         self.add_folder_action()
+        
+    def on_editproject_action_activate(self, action, data=None):
+        Gedit.commands_load_location(self.window, 
+            Gio.File.new_for_path(self._project.get_path()), None, -1, -1)
         
     def on_refresh_action_activate(self, action, data=None):
         self._project.reload()

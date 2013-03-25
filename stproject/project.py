@@ -49,6 +49,9 @@ class Project (object):
     def get_name(self):
         return self.name
         
+    def get_path(self):
+        return None
+        
     def add_folder(self, path):
         self.folders.append(path)
         
@@ -91,7 +94,9 @@ class ProjectJsonFile (Project):
             if 'folder_exclude_patterns' in f:
                 excludes = f['folder_exclude_patterns']
             self.folders.append(Folder(name, f['path'], excludes))
-        
+    def get_path(self):
+        return self._path
+                
     def add_folder(self, path):
         self._data['folders'].append({
             'path': path
