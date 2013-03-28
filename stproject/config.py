@@ -17,7 +17,7 @@ def _load():
             os.makedirs(_config_file)
         _config_file = os.path.join(_config_file, 'preferences.json')
         try:
-            with open(_config_file, 'rb') as fp:
+            with open(_config_file, 'r') as fp:
                 _config = json.load(fp)
         except:
             _config = {}
@@ -27,7 +27,7 @@ def save_last_project(path):
     _load()
         
     _config['last_open'] = path
-    with open(_config_file, 'wb') as fp:
+    with open(_config_file, 'w') as fp:
         json.dump(_config, fp, indent=4)
             
 def get_last_project():

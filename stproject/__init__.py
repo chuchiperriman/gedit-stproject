@@ -1,7 +1,7 @@
 from gi.repository import GObject, Gtk, Gedit
-from panel import Panel
-from project import ProjectJsonFile
-import config
+from .panel import Panel
+from .project import ProjectJsonFile
+from . import config
 
 UI_XML = """<ui>
 <menubar name="MenuBar">

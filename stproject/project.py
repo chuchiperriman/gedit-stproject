@@ -76,10 +76,10 @@ class ProjectJsonFile (Project):
     def reload(self):
         self.folders = []
         if not os.path.exists(self._path):
-            with open(self._path, 'wb') as fp:
+            with open(self._path, 'w') as fp:
                 json.dump({}, fp, indent=4)
                 
-        with open(self._path, 'rb') as fp:
+        with open(self._path, 'r') as fp:
             self._data = json.load(fp)
         
         if 'name' in self._data:
@@ -102,8 +102,10 @@ class ProjectJsonFile (Project):
             'path': path
         })
         name = os.path.basename(path)
-        self.folders.append(Folder(name, path))
+        folder = Folder(name, path)
+        self.folders.append(folder)
         self.save()
+        return folder
     
     def remove_folder(self, path):
         for f in self._data['folders']:
@@ -123,7 +125,6 @@ class ProjectJsonFile (Project):
         return None
         
     def save(self):
-        return
-        with open(self._path, 'wb') as fp:
+        with open(self._path, 'w') as fp:
             json.dump(self._data, fp, indent=4)
         
