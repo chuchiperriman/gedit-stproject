@@ -1,7 +1,7 @@
 from gi.repository import GObject, Gtk, Gedit
 from .panel import Panel
 from .project import ProjectJsonFile
-from . import config
+from .config import config
 
 UI_XML = """<ui>
 <menubar name="MenuBar">
@@ -10,6 +10,8 @@ UI_XML = """<ui>
         <menuitem action='CreateAction' />
         <menuitem action="OpenAction"/>
         <menuitem action="LastAction"/>
+      </placeholder>
+      <placeholder name="RecentProjects">
       </placeholder>
     </menu>
 </menubar>
@@ -49,7 +51,7 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
         self._panel.activate_item(self._side_widget)
     
     def _build_menu(self):
-        manager = self.window.get_ui_manager()
+        self.ui_manager = self.window.get_ui_manager()
         self._actions = Gtk.ActionGroup("StprojectActions")
         self._actions.add_actions([
             ('ProjectMenu', None, _('_Project'), None, None, None),
@@ -63,17 +65,29 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
                 None, "Open the las opened project", 
                 self.on_last_action_activate),
         ])
-        manager.insert_action_group(self._actions)
-        self._ui_merge_id = manager.add_ui_from_string(UI_XML)
+        self.ui_manager.insert_action_group(self._actions)
+        self._ui_merge_id = self.ui_manager.add_ui_from_string(UI_XML)
         
         # Moved the menu to a less surprising position.
-        manager = self.window.get_ui_manager()
-        menubar = manager.get_widget('/MenuBar')
-        project_menu = manager.get_widget('/MenuBar/ProjectMenu')
+        menubar = self.ui_manager.get_widget('/MenuBar')
+        project_menu = self.ui_manager.get_widget('/MenuBar/ProjectMenu')
         menubar.remove(project_menu)
         menubar.insert(project_menu, 5)
         self.do_update_state()
-        manager.ensure_update()
+        self.ui_manager.ensure_update()
+        config.connect("saved", self.on_config_saved)
+        
+    def on_config_saved(self, data):
+        #TODO Reorder the recent project (the last at top etc)
+        for r in config.get_recent_projects():
+            if not self._actions.get_action(r):
+                self._actions.add_actions([(
+                    r, None, r, 
+                        None, "Open the project", 
+                        self.on_recent_action_activate),])
+            self.ui_manager.add_ui(self.ui_manager.new_merge_id(), 
+                '/MenuBar/ProjectMenu/RecentProjects', r, 
+                r, Gtk.UIManagerItemType.MENUITEM, False)
         
     def on_create_action_activate(self, action, data=None):
         self._side_widget.create_project_action()
@@ -93,4 +107,8 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
                 Gtk.ButtonsType.OK, "No project to open")
             dialog.run()
             dialog.destroy()
-            return
+            
+    def on_recent_action_activate(self, action, data=None):
+        self.load_project(ProjectJsonFile(action.get_name()))
+        self._panel.activate_item(self._side_widget)
+        

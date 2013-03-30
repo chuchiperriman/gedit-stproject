@@ -1,7 +1,7 @@
 import os
 from gi.repository import GObject, Gtk, Gedit, Gio, Gdk
 from .project import ProjectJsonFile, Folder
-from . import config
+from .config import config
 
 
 POPUP_UI = """
@@ -59,7 +59,7 @@ class Panel (Gtk.ScrolledWindow):
         self._append_folder(None, folder)
         
     def save_last_project(self, path):
-        path = config.save_last_project(path)
+        path = config.set_last_project(path)
             
     def create_project_action(self):
         dialog = Gtk.FileChooserDialog("Please choose a file to create", self.window,
