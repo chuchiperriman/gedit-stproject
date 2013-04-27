@@ -27,10 +27,20 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
     def do_activate(self):
         self._build_panel()
         self._build_menu()
+        path = config.get_last_project()
+        if path:
+            self.on_last_action_activate(None)
+            
+        self.window.connect('active-tab-state-changed', self.on_active_tab_state_changed)
+        self.window.connect('tab-added', self.on_tab_added)
+        self.window.connect('tab-removed', self.on_tab_removed)
 
     def do_deactivate(self):
         panel = self.window.get_side_panel()
         panel.remove_item(self._side_widget)
+        self.window.disconnect_by_func(self.on_active_tab_state_changed)
+        self.window.disconnect_by_func(self.on_tab_added)
+        self.window.disconnect_by_func(self.on_tab_removed)
 
     def do_update_state(self):
         pass
@@ -76,9 +86,9 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
         self.do_update_state()
         self.ui_manager.ensure_update()
         config.connect("saved", self.on_config_saved)
-        
-    def on_config_saved(self, data):
-        #TODO Reorder the recent project (the last at top etc)
+        self._reload_recents()
+    
+    def _reload_recents(self):
         for r in config.get_recent_projects():
             if not self._actions.get_action(r):
                 self._actions.add_actions([(
@@ -88,6 +98,28 @@ class StProjectPlugin(GObject.Object, Gedit.WindowActivatable):
             self.ui_manager.add_ui(self.ui_manager.new_merge_id(), 
                 '/MenuBar/ProjectMenu/RecentProjects', r, 
                 r, Gtk.UIManagerItemType.MENUITEM, False)
+    
+    def _save_open_files(self):
+        paths = []
+        for d in self.window.get_documents():
+            l = d.get_location()
+            if l is not None:
+                paths.append(l.get_path())
+        print (paths)
+        self._project.set_open_files(paths)
+    
+    def on_tab_added (self, window, tab, data=None):
+        self._save_open_files()
+        
+    def on_tab_removed (self, window, tab, data=None):
+        self._save_open_files()
+    
+    def on_active_tab_state_changed (self, window, tab=None, data=None):
+        self._save_open_files()
+        
+    def on_config_saved(self, data=None):
+        #TODO Reorder the recent project (the last at top etc)
+        self._reload_recents()
         
     def on_create_action_activate(self, action, data=None):
         self._side_widget.create_project_action()

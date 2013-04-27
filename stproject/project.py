@@ -45,6 +45,7 @@ class Project (object):
     def __init__(self):
         self.folders = []
         self.name = 'Project'
+        self.open_files = []
     
     def get_name(self):
         return self.name
@@ -63,6 +64,18 @@ class Project (object):
     
     def get_folder_icon(self, folder):
         return None
+        
+    def get_open_files(self):
+        """
+        List of path files
+        """
+        return self.open_files
+        
+    def set_open_files(self, files):
+        """
+        List of path files
+        """
+        self.open_files = files
         
     def reload(self):
         pass
@@ -87,6 +100,11 @@ class ProjectJsonFile (Project):
             
         if 'folders' not in self._data:
             self._data['folders'] = []
+            
+        if 'open_files' not in self._data:
+            self._data['open_files'] = []
+        
+        self.open_files = self._data['open_files']
         
         for f in self._data['folders']:
             name = os.path.basename(f['path'])
@@ -94,6 +112,7 @@ class ProjectJsonFile (Project):
             if 'folder_exclude_patterns' in f:
                 excludes = f['folder_exclude_patterns']
             self.folders.append(Folder(name, f['path'], excludes))
+            
     def get_path(self):
         return self._path
                 
@@ -123,6 +142,11 @@ class ProjectJsonFile (Project):
             if f['path'] == folder and 'icon' in f:
                 return Gio.FileIcon.new(Gio.File.new_for_path(f['icon']))
         return None
+        
+    def set_open_files(self, files):
+        super(ProjectJsonFile, self).set_open_files(files)
+        self._data['open_files'] = files
+        self.save()
         
     def save(self):
         with open(self._path, 'w') as fp:
